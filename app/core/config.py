@@ -9,7 +9,16 @@ class Settings(BaseSettings):
     GEMINI_ANSWER_MODEL: str = "gemini-2.5-flash"
     
     # ChromaDB
-    CHROMA_BASE_URL: str = "http://localhost:8081"
+    CHROMA_HOST: str = "localhost"
+    CHROMA_PORT: int = 8081
+    CHROMA_BASE_URL: str = ""  # Will be computed in __init__ if not provided
+
+    @property
+    def chroma_url(self) -> str:
+        if self.CHROMA_BASE_URL:
+            return self.CHROMA_BASE_URL
+        return f"http://{self.CHROMA_HOST}:{self.CHROMA_PORT}"
+
     CHROMA_TENANT: str = "default_tenant"
     CHROMA_DATABASE: str = "default_database"
     CHROMA_COLLECTION_NAME: str = "rag_collection"

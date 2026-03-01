@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class VectorStore:
     def __init__(self):
-        self.base_url = settings.CHROMA_BASE_URL.rstrip("/")
+        self.base_url = settings.chroma_url.rstrip("/")
         self.collection_name = settings.CHROMA_COLLECTION_NAME
         self.collection_id = None
         genai.configure(api_key=settings.GEMINI_API_KEY)
