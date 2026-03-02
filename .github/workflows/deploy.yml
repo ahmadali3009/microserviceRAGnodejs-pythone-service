@@ -56,6 +56,10 @@ jobs:
             
             cd ~/ragpractice
             
+            echo "Pre-deployment Cleanup..."
+            sudo docker image prune -a -f || true
+            sudo docker system prune -f --volumes || true
+            
             echo "Logging in to ECR..."
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
             AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
