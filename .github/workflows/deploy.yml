@@ -51,11 +51,15 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: ECR_REGISTRY,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,GEMINI_API_KEY
+          command_timeout: 60m
           script: |
             set -e
             set -o pipefail
             
             cd ~/ragpractice
+            
+            echo "Disk Space Before Cleanup:"
+            df -h
             
             echo "Syncing Environment Variables..."
             # Update Gemini API Key
@@ -67,6 +71,9 @@ jobs:
             echo "Pre-deployment Cleanup..."
             sudo docker image prune -a -f || true
             sudo docker system prune -f --volumes || true
+            
+            echo "Disk Space After Cleanup:"
+            df -h
             
             echo "Logging in to ECR..."
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
@@ -87,7 +94,10 @@ jobs:
                 sudo docker-compose up -d --no-deps fastapi
             fi
             
-            echo "Cleanup..."
+            echo "Post-deployment Cleanup..."
             sudo docker image prune -a -f
+            
+            echo "Final Disk Space Status:"
+            df -h
             
             echo "FastAPI deployment successful 🚀"
