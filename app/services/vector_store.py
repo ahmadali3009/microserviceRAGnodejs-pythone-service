@@ -7,6 +7,14 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Add file handler for debugging if not exists
+if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    fh = logging.FileHandler("debug_rag.log")
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(fh)
+    logger.setLevel(logging.INFO)
+
+
 class VectorStore:
     def __init__(self):
         self.base_url = settings.chroma_url.rstrip("/")
@@ -63,6 +71,7 @@ class VectorStore:
                     return []
 
                 results = response.json()
+                logger.info(f"ChromaDB raw results: {results}")
                 
                 # Format response to match expected structure
                 docs = results.get("documents", [[]])[0]
@@ -71,9 +80,14 @@ class VectorStore:
 
                 output = []
                 for doc, meta, dist in zip(docs, metas, distances):
+                    # Align with original Node.js metadata structure
+                    filename = meta.get("filename", "unknown") if meta else "unknown"
+                    page_number = meta.get("pageNumber") if meta else None
+                    source_str = f"{filename}" + (f", Page: {page_number}" if page_number else "")
+                    
                     output.append({
                         "text": doc,
-                        "source": meta.get("source", "unknown") if meta else "unknown",
+                        "source": source_str,
                         "score": round(1 - dist, 4) if dist is not None else 0.0
                     })
                 return output
