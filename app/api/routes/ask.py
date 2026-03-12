@@ -25,8 +25,8 @@ async def ask_question(request: AskRequest):
     over ChromaDB using Gemini embeddings, and return the answer with sources.
     """
     try:
-        logger.info(f"Received question: {request.question}")
-        answer, sources = await _rag_engine.generate_answer(request.question)
+        logger.info(f"Received question: {request.question} for tenant: {request.tenant_id}")
+        answer, sources = await _rag_engine.generate_answer(request.question, request.tenant_id, request.context)
         return AskResponse(answer=answer, sources=sources)
     except Exception as e:
         logger.error(f"RAG pipeline error: {e}")

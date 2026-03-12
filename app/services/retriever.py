@@ -19,7 +19,7 @@ class Retriever:
         self.vector_store = vector_store
         self.splitter = splitter
 
-    async def retrieve(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    async def retrieve(self, query: str, tenant_id: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """
         Split the query into chunks, search ChromaDB for each chunk,
         and return deduplicated results ranked by best score that meet the threshold.
@@ -34,7 +34,7 @@ class Retriever:
         all_results: List[Dict[str, Any]] = []
 
         for chunk in chunks:
-            results = await self.vector_store.search(chunk, k=top_k)
+            results = await self.vector_store.search(chunk, tenant_id=tenant_id, k=top_k)
             for result in results:
                 # Log score for debugging
                 logger.info(f"Retrieved Result Score: {result['score']} | Content: {result['text'][:50]}...")

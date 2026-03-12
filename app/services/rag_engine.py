@@ -11,29 +11,41 @@ class RAGEngine:
         genai.configure(api_key=settings.GEMINI_API_KEY)
         self.model = genai.GenerativeModel(model_name=settings.GEMINI_ANSWER_MODEL)
 
-    async def generate_answer(self, query: str) -> Tuple[str, List[str]]:
+    async def generate_answer(self, query: str, tenant_id: str, provided_context: Optional[str] = None) -> Tuple[str, List[Dict[str, Any]]]:
         """
         Retrieve relevant documents from ChromaDB and use Gemini to generate an answer.
         Returns (answer_text, list_of_sources).
         """
-        docs = await self.retriever.retrieve(query)
+        if provided_context is not None:
+            context_text = provided_context
+            # When context is provided by Node.js, we don't return sources back to it 
+            # as it already has them. We just return an empty list or the ones cited.
+            # For now, we'll let Node.js handle the source list mapping since it sent the context.
+            sources = [] 
+            print("DEBUG: Using provided context from Node.js")
+        else:
+            docs = await self.retriever.retrieve(query, tenant_id=tenant_id)
 
-        if not docs:
-            return (
-                "I could not find any relevant information in the knowledge base to answer your question.",
-                [],
-            )
+            if not docs:
+                return (
+                    "I could not find any relevant information in the knowledge base to answer your question.",
+                    [],
+                )
 
-        # Build context with numbered sources for the prompt
-        context_parts = []
-        sources = []
-        for i, doc in enumerate(docs, start=1):
-            source_name = doc.get("source", "unknown")
-            context_parts.append(f"[Source {i}] (File: {source_name})\n{doc['text']}\n")
-            if source_name not in sources:
-                sources.append(source_name)
+            # Build context with numbered sources for the prompt
+            context_parts = []
+            sources = []
+            for i, doc in enumerate(docs, start=1):
+                source_name = doc.get("source", "unknown")
+                context_parts.append(f"[Source {i}] (File: {source_name})\n{doc['text']}\n")
+                
+                # Include structured metadata for the frontend. 
+                source_meta = doc.get("metadata", {})
+                source_meta["source_id"] = i  
+                sources.append(source_meta)
 
-        context_text = "\n".join(context_parts)
+            context_text = "\n".join(context_parts)
+            print("DEBUG: Final Sources for Frontend:", sources)
 
         # Ported prompt logic from the previous Node.js implementation
         prompt = f"""

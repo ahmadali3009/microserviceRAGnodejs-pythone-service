@@ -46,7 +46,7 @@ class VectorStore:
         )
         return result["embedding"]
 
-    async def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+    async def search(self, query: str, tenant_id: str, k: int = 3) -> List[Dict[str, Any]]:
         """Search ChromaDB via REST API."""
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
@@ -62,6 +62,7 @@ class VectorStore:
                 payload = {
                     "query_embeddings": [embedding],
                     "n_results": k,
+                    "where": {"tenantId": tenant_id},
                     "include": ["documents", "metadatas", "distances"]
                 }
                 
@@ -88,6 +89,7 @@ class VectorStore:
                     output.append({
                         "text": doc,
                         "source": source_str,
+                        "metadata": meta,  # Include full metadata for frontend citation
                         "score": round(1 - dist, 4) if dist is not None else 0.0
                     })
                 return output
