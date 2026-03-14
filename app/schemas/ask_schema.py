@@ -1,10 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 class AskRequest(BaseModel):
     question: str
+    tenant_id: str = Field(..., alias="tenantId")
     context: Optional[str] = None
-    tenant_id: str
+
+    model_config = ConfigDict(populate_by_name=True)
 
 class AskResponse(BaseModel):
     answer: str

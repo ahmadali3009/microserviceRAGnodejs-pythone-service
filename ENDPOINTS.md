@@ -35,9 +35,11 @@ Receive a question, perform semantic search over the vectorized documents, and g
 - **Request Body:**
   ```json
   {
-    "question": "What is the company's leave policy?"
+    "question": "What is the company's leave policy?",
+    "tenant_id": "tenant_abc_123"
   }
   ```
+  *Note: Both `tenant_id` (snake_case) and `tenantId` (camelCase) are supported.*
 - **Response:**
   ```json
   {

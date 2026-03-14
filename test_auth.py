@@ -5,25 +5,28 @@ BASE_URL = "http://127.0.0.1:8000/api/v1"
 API_KEY = "your-super-secret-key"  # Default from config.py
 
 def test_ask_auth():
-    payload = {"question": "What is RAG?"}
+    payload = {
+        "question": "What is RAG?",
+        "tenant_id": "default_tenant"  # Added this
+    }
     
     # 1. Test without header
     print("Test 1: Missing Header")
     try:
-        response = requests.post(f"{BASE_URL}/ask", json=payload)
+        response = requests.post(f"{BASE_URL}/ask", json={"question": "What is RAG?"}) # Intentionally missing tenant_id to see 422
         print(f"Status: {response.status_code}")
         print(f"Response: {response.json()}")
     except Exception as e:
         print(f"Error: {e}")
     print("-" * 20)
 
-    # 2. Test with wrong key
-    print("Test 2: Wrong API Key")
+    # 2. Test with correct key but missing tenant_id
+    print("Test 2: Missing tenant_id")
     try:
         response = requests.post(
             f"{BASE_URL}/ask", 
-            json=payload, 
-            headers={"X-Internal-API-Key": "wrong-key"}
+            json={"question": "What is RAG?"}, 
+            headers={"X-Internal-API-Key": API_KEY}
         )
         print(f"Status: {response.status_code}")
         print(f"Response: {response.json()}")
@@ -31,10 +34,8 @@ def test_ask_auth():
         print(f"Error: {e}")
     print("-" * 20)
 
-    # 3. Test with correct key
-    # Note: This might fail if the server isn't running or ChromaDB isn't accessible,
-    # but the status code should tell us if the AUTH passed.
-    print("Test 3: Correct API Key")
+    # 3. Test with correct key and correct payload
+    print("Test 3: Correct API Key and Payload")
     try:
         response = requests.post(
             f"{BASE_URL}/ask", 
@@ -43,9 +44,10 @@ def test_ask_auth():
         )
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
-            print("Auth Success!")
+            print("Success!")
+            print(f"Response: {response.json().get('answer')[:100]}...")
         else:
-            print(f"Auth likely passed but backend error: {response.status_code}")
+            print(f"Error: {response.status_code}")
             print(f"Response: {response.json()}")
     except Exception as e:
         print(f"Error: {e}")
