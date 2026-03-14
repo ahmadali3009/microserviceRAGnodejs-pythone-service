@@ -31,25 +31,24 @@ Receive a question, perform semantic search over the vectorized documents, and g
 - **Method:** `POST`
 - **Auth Required:** Yes (Internal API Key via Headers)
 - **Headers:**
-  - `X-Internal-Secret`: The shared internal secret key between the Gateway and this service.
+  - `X-Internal-API-Key`: The shared internal secret key between the Gateway and this service.
 - **Request Body:**
   ```json
   {
     "question": "What is the company's leave policy?",
-    "tenant_id": "tenant_abc_123"
+    "tenantId": "tenant_abc_123"
   }
   ```
-  *Note: Both `tenant_id` (snake_case) and `tenantId` (camelCase) are supported.*
+  *Note: Both `tenant_id` (snake_case) and `tenantId` (camelCase) are supported due to Pydantic alias configuration.*
 - **Response:**
   ```json
   {
     "answer": "According to the company handbook...",
     "sources": [
       {
-        "id": 1,
         "filename": "Employee_Handbook.pdf",
         "pageNumber": 12,
-        "chunkIndex": 45,
+        "contentSnippet": "...",
         "viewUrl": "..."
       }
     ]

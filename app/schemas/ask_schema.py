@@ -3,7 +3,7 @@ from typing import List, Optional
 
 class AskRequest(BaseModel):
     question: str
-    tenant_id: str = Field(..., alias="tenantId")
+    tenant_id: str = Field(..., validation_alias="tenantId")
     context: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)

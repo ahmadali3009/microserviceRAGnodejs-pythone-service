@@ -1,207 +1,159 @@
-# RAG Practice — PDF Document Q&A (Microservice Layer)
+# RAG Microservice — Python RAG Service
 
-A **Retrieval-Augmented Generation (RAG)** system built as a dedicated **microservice layer**. It allows you to ask natural-language questions about your PDF documents and get accurate, document-grounded answers without reading entire files. 
+A **Retrieval-Augmented Generation (RAG)** system built as a dedicated **Python microservice**. It enables natural-language questioning over PDF documents, providing document-grounded answers by leveraging semantic search and large language models.
 
-By operating as an independent microservice, this project can be seamlessly integrated into larger applications or architectures, decoupling the heavy lifting of document processing, vector embeddings, and LLM orchestration from your main backend.
+By operating as an independent microservice, this project decouples document processing, vector embeddings, and LLM orchestration from the main application logic, offering a scalable and maintainable AI layer.
 
 ## Overview
 
-Users often work with large PDF documents (50–100+ pages) such as resumes, reports, or manuals. Extracting specific information typically requires manual reading or keyword search—which is time-consuming, error-prone, and inefficient. This microservice solves that by:
-
-- **Extracting text** from uploaded PDFs  
-- **Chunking** content with configurable overlap  
-- **Generating embeddings** via Google Gemini  
-- **Storing vectors** in ChromaDB  
-- **Retrieving relevant chunks** at query time  
-- **Generating answers** grounded in retrieved context  
-
-Answers are strictly based on document content to minimize hallucination.
+This microservice handles the core RAG pipeline:
+- **Semantic Retrieval:** Uses Google Gemini embeddings and ChromaDB for efficient vector search.
+- **Contextual Generation:** Grounded answers generated via Google Gemini, strictly based on retrieved document chunks.
+- **Tenant Isolation:** Supports multi-tenant data segregation.
+- **FastAPI Framework:** High-performance, asynchronous REST API.
 
 ## Features
 
-- **Microservice API:** Fully decoupled REST API for easy integration with other services.
-- **Asynchronous Processing:** Powered by BullMQ + Redis for non-blocking background document parsing.
-- Semantic search over document chunks.
-- LLM-powered answers using only retrieved context.
-- Configurable chunk size, overlap, and batch size.
+- **Decoupled Architecture:** Easily integrable into any system via RESTful APIs.
+- **Semantic Search:** Advanced document retrieval using state-of-the-art embeddings.
+- **Grounded Answers:** Minimizes hallucinations by strictly utilizing retrieved context.
+- **Secure Integration:** Protected by internal API keys.
 
 ## Architecture
 
-This project acts as an isolated RAG processing layer. It exposes a RESTful interface for external applications/clients while internally managing the message queues, vector search, and LLM communication.
+This service acts as the AI engine in a microservice ecosystem.
 
 ```text
-                  [ External Application / Client ]
-                                 │
-                                 ▼ (HTTP REST APIs)
+                   [ API Gateway / Main Backend ]
+                                  │
+                                  ▼ (HTTP REST - /api/v1/ask)
 ┌───────────────────────────────────────────────────────────────┐
-│                    RAG MICROSERVICE LAYER                     │
+│                    PYTHON RAG MICROSERVICE                    │
 │                                                               │
-│   POST /api/upload                        POST /api/search    │
-│  ┌─────────────┐                         ┌─────────────┐      │
-│  │  Express    │ ────────(PDF Jobs)────▶ │  BullMQ     │      │
-│  │  Server     │                         │  Queue      │      │
-│  └──────┬──────┘                         └──────┬──────┘      │
-│         │                                       │             │
-│         ▼                                       ▼             │
-│  ┌─────────────┐                         ┌─────────────┐      │
-│  │   Gemini    │ ◀──────(Query)───────── │  Worker     │      │
-│  │   (LLM)     │                         │  (chunk +   │      │
-│  └──────┬──────┘                         │   embed)    │      │
-│         │                                └──────┬──────┘      │
-│         │          ┌─────────────┐              │             │
-│         └────────▶ │  ChromaDB   │ ◀────────────┘             │
-│                    │  (vectors)  │                            │
-│                    └─────────────┘                            │
+│   ┌─────────────┐          ┌──────────────────────────┐       │
+│   │  FastAPI    │ ───────▶ │   RAG Engine             │       │
+│   │  Router     │          │ (Retriever + LLM)        │       │
+│   └──────┬──────┘          └────────────┬─────────────┘       │
+│          │                              │                     │
+│          ▼                              ▼                     │
+│   ┌─────────────┐          ┌──────────────────────────┐       │
+│   │  Gemini     │ ◀──────▶ │   ChromaDB               │       │
+│   │  (LLM)      │          │   (Vector Store)         │       │
+│   └─────────────┘          └──────────────────────────┘       │
 └───────────────────────────────────────────────────────────────┘
-                     │
-              ┌──────┴──────┐
-              │   Redis     │ (queue state)
-              └─────────────┘
 ```
 
 ## Prerequisites
 
-- **Node.js** 18+  
-- **Redis** (for BullMQ)  
-- **ChromaDB** (vector database)  
-- **Google Gemini API key**  
+- **Python 3.10+**
+- **ChromaDB** running as a service (typically on port 8081)
+- **Google Gemini API Key**
 
 ## Installation
 
-```bash
-git clone <repository-url>
-cd RAGpractice
-npm install
-```
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd python-rag-service
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   python -m venv venv
+   source venv/Scripts/activate  # Windows
+   # or
+   source venv/bin/activate      # Linux/macOS
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Configuration
 
 Create a `.env` file in the project root:
 
 ```env
-PORT=3000
 GEMINI_API_KEY=your_google_gemini_api_key
+INTERNAL_API_KEY=your_secure_internal_api_key
+CHROMA_HOST=localhost
+CHROMA_PORT=8081
 ```
 
 ## Running the System
 
-You need three components running:
-
-### 1. Redis
-
-Ensure Redis is running locally on port 6379:
-
-```bash
-redis-server
-```
-
-### 2. ChromaDB
-
-Run ChromaDB on port 8081 (default):
+Ensure **ChromaDB** is running before starting the service:
 
 ```bash
 chroma run --host localhost --port 8081
 ```
 
-### 3. Application
-
-**Terminal 1 — API server:**
+Start the FastAPI service:
 
 ```bash
-npm start
-# or for development with auto-reload:
-npm run dev
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-**Terminal 2 — Background worker (PDF processing):**
-
-```bash
-npm run worker
-```
-
-The server runs at `http://localhost:3000` (or the configured `PORT`).
-
-**Web UI:** Open `http://localhost:3000` in a browser to upload PDFs via the built-in UI (useful for testing the microservice standalone).
+The service will be available at `http://localhost:8000`.
 
 ## API Reference
 
-| Method | Endpoint       | Description                              |
-|--------|----------------|------------------------------------------|
-| GET    | `/`            | Upload UI (static test page)             |
-| GET    | `/api/health`  | Health check — returns microservice status |
-| POST   | `/api/upload`  | Upload a PDF file                        |
-| POST   | `/api/search`  | Query documents with a natural-language question |
+### Ask Question
 
-### Upload PDF
+Performs semantic search and generates an answer based on document context.
 
-```bash
-curl -X POST http://localhost:3000/api/upload \
-  -F "file=@/path/to/document.pdf"
-```
+- **URL:** `/api/v1/ask`
+- **Method:** `POST`
+- **Headers:**
+  - `X-Internal-API-Key`: `<your_internal_api_key>`
+  - `Content-Type`: `application/json`
 
-**Response:**
-```json
-{
-  "success": true,
-  "jobId": "1"
-}
-```
+- **Request Body:**
+  ```json
+  {
+    "question": "What is the summary of the document?",
+    "tenantId": "user_tenant_123"
+  }
+  ```
 
-The worker processes the PDF in the background. Wait for processing to finish before searching.
+- **Response:**
+  ```json
+  {
+    "answer": "The document provides a detailed overview of...",
+    "sources": [
+      {
+        "filename": "document_name.pdf",
+        "pageNumber": 5,
+        "contentSnippet": "..."
+      }
+    ]
+  }
+  ```
 
-### Search / Ask
-
-```bash
-curl -X POST http://localhost:3000/api/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are the main findings in this report?"}'
-```
-
-**Response:**
-```json
-{
-  "response": "Based on the document, the main findings are..."
-}
-```
+See [ENDPOINTS.md](ENDPOINTS.md) for full API documentation.
 
 ## Tech Stack
 
-| Component   | Technology                    |
-|------------|-------------------------------|
-| Runtime    | Node.js (ES Modules)          |
-| Framework  | Express 5                     |
-| Queue      | BullMQ + Redis                |
-| Vector DB  | ChromaDB                      |
-| Embeddings | Google Gemini `text-embedding-004` |
-| LLM        | Google Gemini 2.5 Flash       |
-| PDF Parse  | pdf-parse                     |
+| Component     | Technology                          |
+|---------------|-------------------------------------|
+| Framework     | FastAPI                             |
+| Language      | Python 3.10+                        |
+| Vector DB     | ChromaDB                            |
+| Embeddings    | Google Gemini (`text-embedding-004`) |
+| LLM           | Google Gemini 2.5 Flash             |
+| Documentation | Pydantic (OpenAPI/Swagger)          |
 
 ## Project Structure
 
 ```
-RAGpractice/
-├── index.js     # Express API server, upload & search routes
-├── worker.js    # BullMQ worker — chunking, embedding, ChromaDB upsert
-├── common.js    # ChromaDB client, Gemini embedding function
-├── public/      # Static upload UI (same origin, no CORS)
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-├── package.json
-├── decien.md    # Architecture & design decisions
-└── README.md
+app/
+├── api/             # API routes and dependencies
+├── core/            # Configuration and core logic
+├── schemas/         # Pydantic models (Request/Response)
+├── services/        # RAG Engine, Vector Store, Splitter, etc.
+└── main.py          # FastAPI application entry point
 ```
-
-## Design Decisions
-
-See [`decien.md`](decien.md) for detailed notes on:
-
-- **Microservice Segregation:** Why decoupled asynchronous tasks are preferred.
-- Why RAG over fine-tuning.
-- Advanced RAG vs traditional/agentic.
-- Asynchronous processing with BullMQ.
-- ChromaDB selection.
-- Hallucination mitigation strategy.
 
 ## License
 
