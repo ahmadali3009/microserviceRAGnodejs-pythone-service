@@ -1,159 +1,184 @@
-# RAG Microservice — Python RAG Service
+# RAG Practice — Full Project Overview
 
-A **Retrieval-Augmented Generation (RAG)** system built as a dedicated **Python microservice**. It enables natural-language questioning over PDF documents, providing document-grounded answers by leveraging semantic search and large language models.
-
-By operating as an independent microservice, this project decouples document processing, vector embeddings, and LLM orchestration from the main application logic, offering a scalable and maintainable AI layer.
+A comprehensive **Retrieval-Augmented Generation (RAG)** ecosystem designed for document-grounded Q&A. This system consists of a high-performance **Node.js API Gateway** for orchestration and a specialized **Python RAG Microservice** for AI-driven retrieval and generation.
 
 ## Overview
 
-This microservice handles the core RAG pipeline:
-- **Semantic Retrieval:** Uses Google Gemini embeddings and ChromaDB for efficient vector search.
-- **Contextual Generation:** Grounded answers generated via Google Gemini, strictly based on retrieved document chunks.
-- **Tenant Isolation:** Supports multi-tenant data segregation.
-- **FastAPI Framework:** High-performance, asynchronous REST API.
+Users often work with large PDF documents where extracting specific information is time-consuming. This system provides a seamless end-to-end pipeline:
+- **Node.js Gateway:** Handles file uploads, job queuing ([BullMQ](https://docs.bullmq.io/)), and user-facing REST APIs.
+- **Python Service:** Dedicated AI engine using [Google Gemini](https://ai.google.dev/) for embeddings/generation and [ChromaDB](https://docs.trychroma.com/) for vector storage.
+- **Grounded Accuracy:** Answers are strictly based on retrieved document chunks to minimize hallucinations.
 
-## Features
-
-- **Decoupled Architecture:** Easily integrable into any system via RESTful APIs.
-- **Semantic Search:** Advanced document retrieval using state-of-the-art embeddings.
-- **Grounded Answers:** Minimizes hallucinations by strictly utilizing retrieved context.
-- **Secure Integration:** Protected by internal API keys.
-
-## Architecture
-
-This service acts as the AI engine in a microservice ecosystem.
+## Full System Architecture
 
 ```text
-                   [ API Gateway / Main Backend ]
-                                  │
-                                  ▼ (HTTP REST - /api/v1/ask)
-┌───────────────────────────────────────────────────────────────┐
-│                    PYTHON RAG MICROSERVICE                    │
-│                                                               │
-│   ┌─────────────┐          ┌──────────────────────────┐       │
-│   │  FastAPI    │ ───────▶ │   RAG Engine             │       │
-│   │  Router     │          │ (Retriever + LLM)        │       │
-│   └──────┬──────┘          └────────────┬─────────────┘       │
-│          │                              │                     │
-│          ▼                              ▼                     │
-│   ┌─────────────┐          ┌──────────────────────────┐       │
-│   │  Gemini     │ ◀──────▶ │   ChromaDB               │       │
-│   │  (LLM)      │          │   (Vector Store)         │       │
-│   └─────────────┘          └──────────────────────────┘       │
-└───────────────────────────────────────────────────────────────┘
+       [ Client (Web UI / Curl) ]
+                │
+                ▼ (HTTP - /api/upload, /api/search)
+┌───────────────────────────────────────────┐
+│           MAIN API GATEWAY (Node.js)      │
+│   (Express, BullMQ, Redis, Multer)        │
+└─────────────────────┬─────────────────────┘
+                      │
+                      ▼ (Internal REST - /api/v1/ask)
+┌───────────────────────────────────────────┐
+│           PYTHON RAG MICROSERVICE         │
+│   (FastAPI, RAG Engine, Gemini, ChromaDB) │
+└───────────┬───────────────────┬───────────┘
+            │                   │
+            ▼                   ▼
+     ┌─────────────┐     ┌─────────────┐
+     │   Redis     │     │  ChromaDB   │
+     │  (Queues)   │     │  (Vectors)  │
+     └─────────────┘     └─────────────┘
 ```
+
+## Key Features
+
+- **Decoupled Design:** Independent scaling of ingestion (Node.js) and inference (Python).
+- **Asynchronous Processing:** Multi-threaded PDF parsing via [BullMQ](https://docs.bullmq.io/) background workers.
+- **Semantic Search:** Advanced vector retrieval using `text-embedding-004`.
+- **Tenant Isolation:** Secure multi-tenant data segregation supporting both `snake_case` and `camelCase` parameters.
+- **Modern UI:** Built-in web interface for simple document management.
+
+---
+
+## 1. Main API Gateway (Node.js)
+
+Located in `d:\RAGpractice`, this component serves as the entry point.
+
+### Responsibilities:
+- **File Management:** PDF upload and temporary storage.
+- **Job Ingestion:** Pushes parsing tasks to [Redis](https://redis.io/) via BullMQ.
+- **Background Workers:** Extracts text and interacts with the Python service for indexing.
+- **Search Orchestration:** Coordinates between the user and the AI engine.
+
+### External Resources:
+- [Express.js Documentation](https://expressjs.com/)
+- [BullMQ Guide](https://docs.bullmq.io/)
+- [Redis Command Reference](https://redis.io/commands/)
+
+---
+
+## 2. Python RAG Microservice
+
+Located in `d:\pyhon-rag-service`, this component handles the core AI logic.
+
+### Responsibilities:
+- **Vector Operations:** Manages document indexing and retrieval using [ChromaDB](https://docs.trychroma.com/).
+- **LLM Orchestration:** Prompts [Google Gemini 2.5 Flash](https://deepmind.google/technologies/gemini/flash/) with retrieved context.
+- **API Security:** Protected via `X-Internal-API-Key` shared secret.
+
+### External Resources:
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [ChromaDB Documentation](https://docs.trychroma.com/)
+- [Google Gemini API Reference](https://ai.google.dev/api/rest)
+
+---
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **ChromaDB** running as a service (typically on port 8081)
-- **Google Gemini API Key**
+- **Python 3.10+** & **Node.js 18+**
+- **Docker** (recommended for Redis/ChromaDB)
+- **Google Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
 
-## Installation
+## Installation & Setup
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd python-rag-service
-   ```
+### 1. Infrastructure (Launch Dependencies)
+```bash
+# Start Redis (port 6379)
+redis-server
 
-2. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # Windows
-   # or
-   source venv/bin/activate      # Linux/macOS
-   ```
+# Start ChromaDB (port 8081)
+chroma run --host localhost --port 8081
+```
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Python RAG Service
+```bash
+cd python-rag-service
+python -m venv venv
+source venv/Scripts/activate # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+# Run service
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-## Configuration
+### 3. Node.js API Gateway
+```bash
+cd RAGpractice
+npm install
+# Terminal 1: API Server
+npm run dev
+# Terminal 2: Background Worker
+npm run worker
+```
 
-Create a `.env` file in the project root:
+## API Reference
 
+### Gateway API (Node.js)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/upload` | Upload a PDF. Returns a `jobId`. |
+| `POST` | `/api/search` | Ask a question. Body: `{"query": "..."}` |
+| `GET`  | `/api/health` | Gateway health check. |
+
+### Microservice API (Python)
+
+#### `POST /api/v1/ask`
+Performs semantic search and generates an answer.
+
+- **Headers:** `X-Internal-API-Key: <secret>`
+- **Request Body:**
+  ```json
+  {
+    "question": "What is the summary?",
+    "tenantId": "user_123"
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "answer": "The document states...",
+    "sources": [{"filename": "doc.pdf", "pageNumber": 5}]
+  }
+  ```
+
+## Configuration (.env)
+
+Ensure both services have a `.env` file in their respective roots.
+
+**Python Service (`.env`):**
 ```env
-GEMINI_API_KEY=your_google_gemini_api_key
-INTERNAL_API_KEY=your_secure_internal_api_key
+GEMINI_API_KEY=your_key
+INTERNAL_API_KEY=shared_secret
 CHROMA_HOST=localhost
 CHROMA_PORT=8081
 ```
 
-## Running the System
-
-Ensure **ChromaDB** is running before starting the service:
-
-```bash
-chroma run --host localhost --port 8081
+**Node.js Gateway (`.env`):**
+```env
+PORT=3000
+GEMINI_API_KEY=your_key
+INTERNAL_API_KEY=shared_secret
+PYTHON_SERVICE_URL=http://localhost:8000
 ```
 
-Start the FastAPI service:
+## Design Decisions (Advanced RAG)
 
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-The service will be available at `http://localhost:8000`.
-
-## API Reference
-
-### Ask Question
-
-Performs semantic search and generates an answer based on document context.
-
-- **URL:** `/api/v1/ask`
-- **Method:** `POST`
-- **Headers:**
-  - `X-Internal-API-Key`: `<your_internal_api_key>`
-  - `Content-Type`: `application/json`
-
-- **Request Body:**
-  ```json
-  {
-    "question": "What is the summary of the document?",
-    "tenantId": "user_tenant_123"
-  }
-  ```
-
-- **Response:**
-  ```json
-  {
-    "answer": "The document provides a detailed overview of...",
-    "sources": [
-      {
-        "filename": "document_name.pdf",
-        "pageNumber": 5,
-        "contentSnippet": "..."
-      }
-    ]
-  }
-  ```
-
-See [ENDPOINTS.md](ENDPOINTS.md) for full API documentation.
+This system implements **Advanced RAG** rather than traditional keyword search:
+1. **Grounding:** LLMs act as language generators, not knowledge sources. Answers are strictly based on retrieved chunks.
+2. **Context Preservation:** Strategic chunking with 10% overlap ensures semantic meaning isn't lost at boundaries.
+3. **Hallucination Guard:** If no relevant chunks are found, the system explicitly returns "No relevant information found."
 
 ## Tech Stack
 
-| Component     | Technology                          |
-|---------------|-------------------------------------|
-| Framework     | FastAPI                             |
-| Language      | Python 3.10+                        |
-| Vector DB     | ChromaDB                            |
-| Embeddings    | Google Gemini (`text-embedding-004`) |
-| LLM           | Google Gemini 2.5 Flash             |
-| Documentation | Pydantic (OpenAPI/Swagger)          |
-
-## Project Structure
-
-```
-app/
-├── api/             # API routes and dependencies
-├── core/            # Configuration and core logic
-├── schemas/         # Pydantic models (Request/Response)
-├── services/        # RAG Engine, Vector Store, Splitter, etc.
-└── main.py          # FastAPI application entry point
-```
+| Layer | Technologies |
+|-------|--------------|
+| **Gateway** | [Node.js](https://nodejs.org/), [Express](https://expressjs.com/), [BullMQ](https://docs.bullmq.io/) |
+| **AI Engine** | [FastAPI](https://fastapi.tiangolo.com/), [Python](https://www.python.org/) |
+| **Storage** | [ChromaDB](https://docs.trychroma.com/), [Redis](https://redis.io/) |
+| **Model** | [Google Gemini 2.5 Flash](https://deepmind.google/technologies/gemini/flash/) |
 
 ## License
 

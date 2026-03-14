@@ -46,6 +46,7 @@ Receive a question, perform semantic search over the vectorized documents, and g
     "answer": "According to the company handbook...",
     "sources": [
       {
+        "id": 1,
         "filename": "Employee_Handbook.pdf",
         "pageNumber": 12,
         "contentSnippet": "...",
