@@ -1,4 +1,4 @@
-# RAG Practice — Full Project Overview
+# RAG Deepmind Ai — Full Project Overview
 
 A comprehensive **Retrieval-Augmented Generation (RAG)** ecosystem designed for document-grounded Q&A. This system consists of a high-performance **Node.js API Gateway** for orchestration and a specialized **Python RAG Microservice** for AI-driven retrieval and generation.
 
