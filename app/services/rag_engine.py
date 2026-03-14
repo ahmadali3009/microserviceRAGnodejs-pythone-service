@@ -1,5 +1,5 @@
 import google.generativeai as genai
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from app.services.retriever import Retriever
 from app.core.config import settings
